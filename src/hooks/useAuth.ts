@@ -9,7 +9,11 @@ interface AuthUser extends User {
   isSuperAdmin?: boolean;
 }
 
-const SUPER_ADMIN_UID = 'demo-super-admin-uid'; // Replace with actual UID
+// Add your Firebase UID here to get admin access
+const ADMIN_UIDS = [
+  'demo-super-admin-uid', // Replace with your actual Firebase UID
+  // Add more admin UIDs as needed
+];
 
 export const useAuth = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -19,21 +23,39 @@ export const useAuth = () => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          // Check if user is admin by UID
+          const isAdminByUID = ADMIN_UIDS.includes(firebaseUser.uid);
+          const isSuperAdmin = firebaseUser.uid === ADMIN_UIDS[0]; // First UID is super admin
+          
           // Get user role from Firestore
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          const userData = userDoc.data();
+          let userData = null;
+          try {
+            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            userData = userDoc.data();
+          } catch (firestoreError) {
+            console.log('Firestore access failed, using UID-based auth');
+          }
           
           const authUser: AuthUser = {
             ...firebaseUser,
-            role: userData?.role || 'user',
-            isAdmin: userData?.role === 'admin' || firebaseUser.uid === SUPER_ADMIN_UID,
-            isSuperAdmin: firebaseUser.uid === SUPER_ADMIN_UID
+            role: userData?.role || (isAdminByUID ? 'admin' : 'user'),
+            isAdmin: userData?.role === 'admin' || isAdminByUID,
+            isSuperAdmin: userData?.role === 'super_admin' || isSuperAdmin
           };
           
           setUser(authUser);
         } catch (error) {
           console.error('Error fetching user data:', error);
-          setUser(firebaseUser as AuthUser);
+          // Fallback: check if user is admin by UID even if Firestore fails
+          const isAdminByUID = ADMIN_UIDS.includes(firebaseUser.uid);
+          const isSuperAdmin = firebaseUser.uid === ADMIN_UIDS[0];
+          
+          setUser({
+            ...firebaseUser,
+            role: isAdminByUID ? 'admin' : 'user',
+            isAdmin: isAdminByUID,
+            isSuperAdmin: isSuperAdmin
+          } as AuthUser);
         }
       } else {
         setUser(null);
