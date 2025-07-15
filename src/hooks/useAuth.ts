@@ -11,7 +11,7 @@ interface AuthUser extends User {
 
 // Add your Firebase UID here to get admin access
 const ADMIN_UIDS = [
-  'demo-super-admin-uid', // Replace with your actual Firebase UID
+  'VCntHsLFKCYpIOxPThnTwYYiwDB3', // Replace with your actual Firebase UID
   // Add more admin UIDs as needed
 ];
 
